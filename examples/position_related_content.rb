@@ -12,9 +12,19 @@ class Position_related_content
     @vortex = Vortex::Connection.new(host,:use_osx_keychain => true)
   end
 
+  def position_value(path)
+    doc = @vortex.get(path)
+    data = JSON.parse(doc)
+    if(data["properties"]["hideAdditionalContent"])
+      return data["properties"]["hideAdditionalContent"]
+    else
+      return []
+    end
+  end
+
   def position_related_content(path,value)
     @vortex.find(path,:recursive => true,:filename=>/\.html$/) do |item|
-       puts item.uri.to_s
+      puts item.uri.to_s
       data = nil
       begin
         data = JSON.parse(item.content)
@@ -23,7 +33,7 @@ class Position_related_content
       end
       if(data)
         if(value=="false_if_content") then
-          if data["properties"]["related-content"] #&& data["properties"]["related_content"].strip != ""
+          if data["properties"]["related-content"] #&& data["properties"]["related_content"].to_s.strip != ""
             rel_cont_bottom = "false"
           else
             rel_cont_bottom = "true"
