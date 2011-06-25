@@ -39,10 +39,8 @@ class Related_content
 end
 
 
-#related_content = Related_content.new("https://www-dav.vortex-demo.uio.no")
-#path = "/personer/lise/."
-related_content = Related_content.new("https://www-dav.uio.no/")
-path = "/forskning/tverrfak/culcom/nyheter/."
+related_content = Related_content.new("https://www-dav.vortex-demo.uio.no")
+path = "/personer/lise/."
 
 ## send related_content to bottom: (true/false/false_if_content)##
 related_content.alter_related_content(path, "false_if_content")
