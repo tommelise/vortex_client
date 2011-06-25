@@ -6,13 +6,13 @@ require 'rubygems'
 require 'vortex_client'
 require 'json'
 
-class Related_content
+class Position_related_content
 
   def initialize(host)
     @vortex = Vortex::Connection.new(host,:use_osx_keychain => true)
   end
 
-  def alter_related_content(path,value)
+  def position_related_content(path,value)
     @vortex.find(path,:recursive => true,:filename=>/\.html$/) do |item|
        puts item.uri.to_s
       data = nil
@@ -39,10 +39,12 @@ class Related_content
 end
 
 
-related_content = Related_content.new("https://www-dav.vortex-demo.uio.no")
+position_related_content = Position_related_content.new("https://www-dav.vortex-demo.uio.no")
 path = "/personer/lise/."
+#positionrelated_content = Position_related_content.new("https://www-dav.uio.no/")
+#path = "/forskning/tverrfak/culcom/nyheter/."
 
 ## send related_content to bottom: (true/false/false_if_content)##
-related_content.alter_related_content(path, "false_if_content")
+position_related_content.position_related_content(path, "false_if_content")
 
 
