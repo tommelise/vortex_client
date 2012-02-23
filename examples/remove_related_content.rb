@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 # related_content
 #
 # Author: Lise Hamre
@@ -7,6 +8,8 @@ require 'vortex_client'
 require 'json'
 require 'nokogiri'
 require 'pp'
+require 'uri'
+require 'pathname'
 
 
 #TODO: skrive til logfil
@@ -37,7 +40,7 @@ class Remove_related_content
     return doc
   end
   
-  def keep_rel_content(path)
+  def remove_rel_content(path,host)
     log = ""
    
     @vortex.find(path,:recursive => true,:filename=>/\.html$/) do |item|
@@ -55,41 +58,56 @@ class Remove_related_content
           doc=data["properties"]["related-content"]
           doc = doc.gsub("&nbsp;"," ").gsub("\t","")
           html = Nokogiri::HTML.parse(doc)
-          html.xpath(".//p/b").each do |title|
-            element = title.parent.next_sibling
-            while(element != nil and element.class == Nokogiri::XML::Text)
-              element = element.next_sibling
-            end
-            element.xpath(".//li/a").each do |li|
-              href = li.attribute("href").value
-              if (href.include?(path.chop) || href.include?("http://www.hlsenteret.no")   || (not href  =~ /^http\:/ ))
-                puts "remove: " + href
-                log += "remove: " + href +"<br\/>\n"
-                li.remove
-              else
-                puts "keep: " + href 
-                log += "keep: " + href +"<br\/>\n"
-              end
-            end
-            html = remove_if_empty(".//li",html)
-            html = remove_if_empty(".//ul",html)
-            if element.xpath(".//li/a").size < 1
-              title.remove
-              puts "REMOVE: " + title
-              log += "REMOVE: " + title +"<br\/>\n"
-            else 
-              puts "KEEP: " + title
-              log += "KEEP: " + title +"<br\/>\n"
-            end
-            html = remove_if_empty(".//p",html)
+  #        html.xpath(".//p/b").each do |title|
+  #          element = title.parent.next_sibling
+  #          while(element != nil and element.class == Nokogiri::XML::Text)
+  #            element = element.next_sibling
+  #          end
+  #          element.xpath(".//li/a").each do |li|
+  #            href = li.attribute("href").value
+  #            if (href.include?(path.chop) || href.include?("http://www.hlsenteret.no")   || (not href  =~ /^http\:/ ))
+  #              puts "remove: " + href
+  #              log += "remove: " + href +"<br\/>\n"
+  #              li.remove
+  #            else
+  #              puts "keep: " + href 
+  #              log += "keep: " + href +"<br\/>\n"
+  #            end
+  #          end
+  #          html = remove_if_empty(".//li",html)
+  #          html = remove_if_empty(".//ul",html)
+  #          if element.xpath(".//li/a").size < 1
+  #            title.remove
+  #            puts "REMOVE: " + title
+  #            log += "REMOVE: " + title +"<br\/>\n"
+  #          else 
+  #            puts "KEEP: " + title
+  #            log += "KEEP: " + title +"<br\/>\n"
+  #          end
+  #          html = remove_if_empty(".//p",html)
+  #        end
+  #        html = html.inner_html.gsub("\t","").gsub("\n","").gsub("\r","").gsub(/\s{2,}/," ").strip
+  #        puts
+  #        log += "<br\/>\n"
+# #        puts "html: '" + html.to_s + "'"
+  #      end
+        html = html.to_s.gsub("<html>","").gsub("</html>","").gsub("<body>","").gsub("</body>","")
+#        if !html.to_s.include?("${include:tags")
+#          uri = URI.parse(item.uri.to_s)
+#          tag_folder = uri.path
+#          tag_folder = File.dirname(tag_folder)
+#          html="<p>${include:tags scope=["+ tag_folder +"]}<\/p>" + html
+#        end
+          if html.to_s.include?("<h2>S&oslash;k i Kunnskapsbasen</h2>")
+            html = html.gsub("<h2>S&oslash;k i Kunnskapsbasen</h2>","")
           end
-          html = html.inner_html.gsub("\t","").gsub("\n","").gsub("\r","").gsub(/\s{2,}/," ").strip
-          puts
-          log += "<br\/>\n"
-#         puts "html: '" + html.to_s + "'"
+          if html.to_s.include?("<p>${include:search-form}</p>")
+            html = html.gsub("<p>${include:search-form}</p>","")
+          end
+          data["properties"]["related-content"] = html.strip
+#          data["properties"]["related-content"] = ""
+          item.content = data.to_json
         end
-        data["properties"]["related-content"] = html #.gsub("<html><body><\/body><\/html>")
-        item.content = data.to_json
       end
     end
     return log
@@ -104,7 +122,7 @@ class Remove_related_content
       log + 
       "  </body>\n" +
       "</html>\n"
-    File.open(logfil, 'a') do |f|
+    File.open(logfil, 'w') do |f|
       f.write(log)
     end
     puts "\nChangelog written to file: " + logfil
@@ -112,12 +130,14 @@ class Remove_related_content
 
 end
 
+host = "https://www-dav.vortex-demo.uio.no"
+rel_path = "/personer/lise/."
 
-remove_related_content = Remove_related_content.new("https://www-dav.vortex-demo.uio.no")
-path = "/personer/lise/."
-#removerelated_content = Remove_related_content.new("https://www-dav.uio.no/")
-#path = "/forskning/tverrfak/culcom/nyheter/."
+#host = "https://nyweb4-dav.uio.no/"
+#rel_path = "/kunnskapsbasen/."
+#rel_path = "/publikasjoner/."
 
-## send related_content to bottom: (true/false/false_if_content)##
-log = remove_related_content.keep_rel_content(path)
+remove_related_content = Remove_related_content.new(host)
+
+log = remove_related_content.remove_rel_content(rel_path,host)
 remove_related_content.write_log("remove-related-content.html",log)

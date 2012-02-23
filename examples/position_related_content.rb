@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
+
 # related_content
 # This program moves related content from right to bottom or vice versa
 # Value: false_if_content: If related content has contents, you can choose to leave it at the right hand side
-# def image_width can control the position movement based on the size of the immage.
+# def image_width can control the position movement based on the size of the image.
 # def image_size kan resize images to fit better at wide or narrow body-with (NOT TESTED)
 # Author: Lise Hamre
 
@@ -15,11 +17,11 @@ class Position_related_content
     @vortex = Vortex::Connection.new(host,:use_osx_keychain => true)
   end
 
-  def position_value(path)
+  def position_value(path,property)
     doc = @vortex.get(path)
     data = JSON.parse(doc)
-    if(data["properties"]["hideAdditionalContent"])
-      return data["properties"]["hideAdditionalContent"]
+    if(data["properties"][property])
+      return data["properties"][property]
     else
       return []
     end
@@ -86,44 +88,63 @@ class Position_related_content
   end
   
 
-  def position_related_content(path,value,img_width)
+  def position_related_content(path,hide_value,img_width)
+     if(hide_value=="false" or hide_value=="false_if_content")
+         rel_cont_bottom = ["false","true"]
+       elsif(hide_value=="true")
+         rel_cont_bottom = ["true","false"]
+     end
     @vortex.find(path,:recursive => true,:filename=>/\.html$/) do |item|
-#      puts item.uri.to_s
-      rel_cont_bottom = value
-      data = nil
+     data = nil
       begin
         data = JSON.parse(item.content)
       rescue
         puts "Warning. Bad document. Not json:" + item.uri.to_s
       end
-      if(data)
-        if(value=="false_if_content") then
-          if data["properties"]["related-content"] #&& data["properties"]["related_content"].to_s.strip != ""
-            rel_cont_bottom = "false"
-          else
-            rel_cont_bottom = "true"
-          end
+     if(data)
+       #if position_value(item.uri.to_s,"hideAdditionalContent")=="false"
+         puts item.uri.to_s
+         old_hide_value = position_value(item.uri.to_s,"hideAdditionalContent").to_s  
+         puts "gammel-hide-verdi: " + old_hide_value 
+         old_show_value = position_value(item.uri.to_s,"showAdditionalContent").to_s  
+         puts "gammel-show-verdi: " + old_show_value  
+       #end
+       if(hide_value=="false_if_content") then
+         if data["properties"]["related-content"] #&& data["properties"]["related_content"].to_s.strip != ""
+           rel_cont_bottom = ["false","true"]
+         else
+           rel_cont_bottom = ["true","false"]
+         end
         end
 #        data = image_size(data,item.uri.to_s,img_width) 
 #        if wide_image(data,item.uri,img_width)
-#          rel_cont_bottom = false
+#          rel_cont_bottom = "false"
 #        end
-#        puts "related content at bottom: " + rel_cont_bottom.to_s
-        data["properties"]["hideAdditionalContent"] = rel_cont_bottom
-        item.content = data.to_json
-      end
+       if old_hide_value == rel_cont_bottom[1]
+         puts "hideAdditionalContent: " + rel_cont_bottom[0].to_s + " showAdditionalContent: " + rel_cont_bottom[1].to_s
+         data["properties"]["hideAdditionalContent"] = rel_cont_bottom[0]
+         data["properties"]["showAdditionalContent"] = rel_cont_bottom[1]
+         item.content = data.to_json
+#        exit
+       end
+     end
     end
   end
-
+  
 end
 
 
-position_related_content = Position_related_content.new("https://www-dav.vortex-demo.uio.no")
-path = "/personer/lise/."
+position_related_content = Position_related_content.new("https://foreninger-dav.uio.no")
+path = "/legxv/gallery/konv/."
+
+#position_related_content = Position_related_content.new("https://www-dav.vortex-demo.uio.no")
+#path = "/personer/lise/."
 
 #position_related_content = Position_related_content.new("https://www-dav.uio.no/")
 #path = "/forskning/tverrfak/culcom/nyheter/."
 
 ## send related_content to bottom: (true/false/false_if_content,img_with)##
-position_related_content.position_related_content(path, "true",500)
+#position_related_content.position_related_content(path,"true",500)
+#position_related_content.position_related_content(path,"false",500)
+position_related_content.position_related_content(path,"false_if_content",500)
 
